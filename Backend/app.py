@@ -1,12 +1,13 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from PIL import Image
 import uuid
 import os
 
+from ocr.reader import extract_text_boxes
+
 app = FastAPI()
 
-# Allow frontend later
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,23 +24,34 @@ def root():
     return {"status": "SmartDoc AI backend running"}
 
 
+# ✅ CLEAN UPLOAD ENDPOINT (FILE ONLY)
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
-    # Validate file type
-    if not file.content_type.startswith(("image/", "application/pdf")):
-        return {"error": "Only image or PDF files are allowed"}
-
-    # Generate unique filename
     ext = file.filename.split(".")[-1]
     filename = f"{uuid.uuid4()}.{ext}"
     file_path = os.path.join(UPLOAD_DIR, filename)
 
-    # Save file
     with open(file_path, "wb") as f:
         f.write(await file.read())
 
     return {
         "message": "File uploaded successfully",
+        "filename": filename
+    }
+
+
+# ✅ CLEAN OCR ENDPOINT (FILENAME ONLY)
+@app.post("/ocr")
+async def run_ocr(filename: str):
+    file_path = os.path.join(UPLOAD_DIR, filename)
+
+    if not os.path.exists(file_path):
+        return {"error": "File not found"}
+
+    boxes = extract_text_boxes(file_path)
+
+    return {
         "filename": filename,
-        "content_type": file.content_type
+        "total_boxes": len(boxes),
+        "data": boxes
     }

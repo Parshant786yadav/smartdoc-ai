@@ -1,29 +1,32 @@
-import pytesseract
+import easyocr
 import cv2
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+reader = easyocr.Reader(['en'])
 
 def extract_text_boxes(image_path):
+
     image = cv2.imread(image_path)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    data = pytesseract.image_to_data(
-        gray,
-        output_type=pytesseract.Output.DICT,
-        config="--psm 6"
-    )
+    results = reader.readtext(image)
 
-    results = []
+    boxes = []
 
-    for i in range(len(data["text"])):
-        text = data["text"][i].strip()
-        if text:
-            results.append({
+    for (bbox, text, confidence) in results:
+
+        if confidence > 0.3:   # adjust if needed
+            (top_left, top_right, bottom_right, bottom_left) = bbox
+
+            x = int(top_left[0])
+            y = int(top_left[1])
+            width = int(top_right[0] - top_left[0])
+            height = int(bottom_left[1] - top_left[1])
+
+            boxes.append({
                 "text": text,
-                "x": data["left"][i],
-                "y": data["top"][i],
-                "width": data["width"][i],
-                "height": data["height"][i]
+                "x": x,
+                "y": y,
+                "width": width,
+                "height": height
             })
 
-    return results
+    return boxes

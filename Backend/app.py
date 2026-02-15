@@ -42,7 +42,11 @@ async def upload_document(file: UploadFile = File(...)):
 
 # ✅ CLEAN OCR ENDPOINT (FILENAME ONLY)
 @app.post("/ocr")
-async def run_ocr(filename: str):
+async def run_ocr(filename: str = ""):
+
+    if not filename:
+        return {"error": "Filename is missing"}
+
     file_path = os.path.join(UPLOAD_DIR, filename)
 
     if not os.path.exists(file_path):
@@ -55,3 +59,4 @@ async def run_ocr(filename: str):
         "total_boxes": len(boxes),
         "data": boxes
     }
+
